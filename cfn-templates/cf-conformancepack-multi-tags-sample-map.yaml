@@ -25,6 +25,9 @@ Mappings:
     tag1:
       key: company-name
       value: CompanyXYZ
+    tag2:
+      key: mytag2
+      value: mytag2value
 Resources:
   AWSConfigProcessCheck:
     Properties:
@@ -39,6 +42,8 @@ Resources:
       InputParameters:
         tag1Key: !FindInMap [RequiredTags, tag1, key]
         tag1Value: !FindInMap [RequiredTags, tag1, value]
+        tag2Key: !FindInMap [RequiredTags, tag2, key]
+        tag2Value: !FindInMap [RequiredTags, tag2, value]
 
     Type: AWS::Config::ConfigRule
   MapTaggingRemediation:
@@ -56,6 +61,8 @@ Resources:
                 - '{"${tag1key}":"${tag1value}","${tag2key}":"${tag2value}"}'
                 - tag1key: !FindInMap [RequiredTags, tag1, key]
                   tag1value: !FindInMap [RequiredTags, tag1, value]
+                  tag2key: !FindInMap [RequiredTags, tag2, key]
+                  tag2value: !FindInMap [RequiredTags, tag2, value]
 
         ConformancePackName:
           StaticValue:
