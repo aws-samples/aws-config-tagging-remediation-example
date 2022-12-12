@@ -1,0 +1,218 @@
+# *
+# * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# * SPDX-License-Identifier: MIT-0
+# *
+# * Permission is hereby granted, free of charge, to any person obtaining a copy of this
+# * software and associated documentation files (the "Software"), to deal in the Software
+# * without restriction, including without limitation the rights to use, copy, modify,
+# * merge, publish, distribute, sublicense, and/or sell copies of the Software, and to
+# * permit persons to whom the Software is furnished to do so.
+# *
+# * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+# * INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+# * PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+# * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+# * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+# * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+# *
+
+AWSTemplateFormatVersion: 2010-09-09
+Resources:
+  SsmDocumentTagRemediation:
+    Type: AWS::SSM::Document
+    Properties:
+      Content:
+        description: |
+          ### Document Name - SSM-tag-remediation-automation
+
+          ## What does this document do?
+          This document adds the specified tags to the resource checked by required-tags managed rule.
+
+          ## Input Parameters
+          * RequiredTags: (Required) StringMap of the tags to add to the resources.
+          * AutomationAssumeRole: (Optional) This document use the role specified in assumeRole parameter, will not use AutomationAssumeRole
+          * ConformancePackName: used to find the detail info of the non compliant resource
+
+          ## Output Parameters
+          * SetRequiredTags.SuccessfulResources: A list of the resources that were successfully tagged.
+          * SetRequiredTags.FailedResources : A mapList of the resources where tagging failed and the reason for the failure.
+        schemaVersion: '0.3'
+        assumeRole: 'arn:aws:iam::{{global:ACCOUNT_ID}}:role/tagging-remediation-role'
+        outputs:
+          - SetRequiredTags.SuccessfulResources
+          - SetRequiredTags.FailedResources
+        parameters:
+          RequiredTags:
+            type: StringMap
+            description: (Required) The tags to add to the resources.
+            displayType: textarea
+          ResourceID:
+            type: String
+            description: (Required) non-compliant item ResourceID.
+            displayType: textarea
+          ConformancePackName:
+            type: String
+            description: (Required) Conformance Pack name pass to the automation.
+            displayType: textarea
+          AutomationAssumeRole:
+            type: String
+            description: (Optional) The ARN of the role that allows Automation to perform the actions on your behalf.
+            default: ''
+            allowedPattern: '^arn:aws(-cn|-us-gov)?:iam::\d{12}:role\/[\w+=,.@_\/-]+|^$'
+        mainSteps:
+          - name: SetRequiredTags
+            action: 'aws:executeScript'
+            description: |
+              ## SetRequiredTags
+              Adds the specified tags to uncompliant resource checked by required-tags managed rule.
+              ## Inputs
+              * RequiredTags: (StringMap) The tags to add to the resources.
+              ## Outputs
+              * SuccessfulResources: A list of the resources that were successfully tagged.
+              * FailedResources: A mapList of the resources where tagging failed and the reason for the failure.
+            onFailure: Abort
+            isCritical: true
+            timeoutSeconds: 600
+            isEnd: true
+            inputs:
+              Runtime: python3.7
+              Handler: set_required_tags_handler
+              InputPayload:
+                RequiredTags: '{{RequiredTags}}'
+                ResourceID: '{{ResourceID}}'
+                ConformancePackName: '{{ConformancePackName}}'
+              Script: |
+                import json
+                import boto3
+
+                def set_required_tags(resourcesArn,tags):
+                  client = boto3.client('resourcegroupstaggingapi')
+
+                  successesResources = []
+                  FailedResources = []
+
+                  for arn in resourcesArn:
+                      try:
+                          response = client.tag_resources(ResourceARNList = [arn], Tags = tags)
+                          successesResources.append(arn)
+
+                      except Exception as e:
+                        errorMsg = str(e)
+                        FailedResources.append({'ResourceArn': arn , "error": errorMsg})
+
+                  out = {
+                      "SuccessesResources": successesResources,
+                      "FailedResources": FailedResources
+                  }
+                  return out
+
+                def get_config_rule_name(prefix):
+                    client = boto3.client('config')
+                    config_rule_name = ''
+
+                    try:
+                        response = client.describe_conformance_packs()
+                        for cp in response['ConformancePackDetails']:
+                            if prefix+'-' in cp['ConformancePackName']:
+                                ConformancePackId = cp['ConformancePackId']
+                                exit
+                    except Exception as e:
+                        errorMsg = str(e)
+                        print(errorMsg)
+
+                    config_rule_name = 'required-tags-'+ConformancePackId
+                    return config_rule_name
+
+
+                def set_required_tags_handler(event, context):
+                    print(event)
+                    print(event['ResourceID'])
+                    print(event['RequiredTags'])
+
+                    ResourceID = event['ResourceID']
+                    tags = event['RequiredTags']
+                    ConformancePackName = event['ConformancePackName']
+
+
+                    resourcesArn = []
+
+                    config_client = boto3.client('config')
+
+                    #obtain the rule name to match the resourceID
+                    #conformance_pack_name = 'required-tags-conformance-pack'
+                    config_rule_name = get_config_rule_name(ConformancePackName)
+                    print(config_rule_name)
+
+                    #query non complaint resources in the rule to find the resourceID match and getting the resource_type
+                    try:
+                        response = config_client.get_compliance_details_by_config_rule(
+                            ConfigRuleName=config_rule_name,
+                            ComplianceTypes=['NON_COMPLIANT'],
+                            Limit = 10
+                        )
+                    except Exception as e:
+                        errorMsg = str(e)
+                        print(errorMsg)
+
+
+                    query_result = response['EvaluationResults']
+                    for r in query_result:
+                        if r['EvaluationResultIdentifier']['EvaluationResultQualifier']['ResourceId'] == ResourceID:
+                            print(r['EvaluationResultIdentifier']['EvaluationResultQualifier']['ResourceType'])
+                            print(r['EvaluationResultIdentifier']['EvaluationResultQualifier']['ResourceId'])
+                            resource_type = r['EvaluationResultIdentifier']['EvaluationResultQualifier']['ResourceType']
+                            resource_id = r['EvaluationResultIdentifier']['EvaluationResultQualifier']['ResourceId']
+                            break
+
+                    while 'NextToken' in response:
+                        print(response['NextToken'])
+                        try:
+                            response = config_client.get_compliance_details_by_config_rule(
+                                ConfigRuleName=config_rule_name,
+                                ComplianceTypes=['NON_COMPLIANT'],
+                                Limit = 10,
+                                NextToken = response['NextToken']
+                            )
+                        except Exception as e:
+                            errorMsg = str(e)
+                            print(errorMsg)
+
+                        query_result = response['EvaluationResults']
+                        for r in query_result:
+                            if r['EvaluationResultIdentifier']['EvaluationResultQualifier']['ResourceId'] == ResourceID:
+                                resource_type = r['EvaluationResultIdentifier']['EvaluationResultQualifier']['ResourceType']
+                                resource_id = r['EvaluationResultIdentifier']['EvaluationResultQualifier']['ResourceId']
+                                print(resource_type)
+                                print(resource_id)
+                                break
+
+                    #use the resource type and resource ID to find the ARN
+                    response = config_client.batch_get_resource_config(
+                        resourceKeys=[
+                            {
+                                'resourceType': resource_type,
+                                'resourceId': resource_id
+                            },
+                        ]
+                    )
+
+                    configurationItems = response['baseConfigurationItems']
+
+                    for item in configurationItems:
+                        resourcesArn.append(item['arn'])
+                        print(item['arn'])
+
+                    #tag the resource
+                    out = (set_required_tags(resourcesArn,tags))
+                    return out
+
+            outputs:
+              - Name: SuccessfulResources
+                Selector: $.Payload.SuccessesResources
+                Type: StringList
+              - Name: FailedResources
+                Selector: $.Payload.FailedResources
+                Type: MapList
+      DocumentFormat: YAML
+      DocumentType: Automation
+      Name: 'SsmDocumentTagRemediation'

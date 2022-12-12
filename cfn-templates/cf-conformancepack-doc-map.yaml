@@ -1,0 +1,84 @@
+# *
+# * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# * SPDX-License-Identifier: MIT-0
+# *
+# * Permission is hereby granted, free of charge, to any person obtaining a copy of this
+# * software and associated documentation files (the "Software"), to deal in the Software
+# * without restriction, including without limitation the rights to use, copy, modify,
+# * merge, publish, distribute, sublicense, and/or sell copies of the Software, and to
+# * permit persons to whom the Software is furnished to do so.
+# *
+# * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+# * INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+# * PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+# * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+# * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+# * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+# *
+
+Parameters:
+  ConformancePackName:
+    Default: 'TagRemediationConformancePack'
+    Type: String
+Mappings:
+  RequiredTags:
+    tag1:
+      key: company-name
+      value: CompanyXYZ
+    tag2:
+      key: mytag2
+      value: mytag2value
+Resources:
+  AWSConfigProcessCheck:
+    Properties:
+      ConfigRuleName: required-tags
+      Description: Check resources against the required tags
+      Source:
+        Owner: AWS
+        SourceIdentifier: REQUIRED_TAGS
+      Scope:
+        ComplianceResourceTypes:
+        - AWS::EC2::Instance
+      InputParameters:
+        tag1Key: !FindInMap [RequiredTags, tag1, key]
+        tag1Value: !FindInMap [RequiredTags, tag1, value]
+        tag2Key: !FindInMap [RequiredTags, tag2, key]
+        tag2Value: !FindInMap [RequiredTags, tag2, value]
+
+    Type: AWS::Config::ConfigRule
+  MapTaggingRemediation:
+    DependsOn: AWSConfigProcessCheck
+    Type: 'AWS::Config::RemediationConfiguration'
+    Properties:
+      ConfigRuleName: required-tags
+      TargetId: "arn:aws:ssm:us-east-1:<management-account-id>:document/SsmDocumentTagRemediation"
+      TargetType: "SSM_DOCUMENT"
+      Parameters:
+        RequiredTags:
+          StaticValue:
+            Values:
+              - !Sub
+                - '{"${tag1key}":"${tag1value}","${tag2key}":"${tag2value}"}'
+                - tag1key: !FindInMap [RequiredTags, tag1, key]
+                  tag1value: !FindInMap [RequiredTags, tag1, value]
+                  tag2key: !FindInMap [RequiredTags, tag2, key]
+                  tag2value: !FindInMap [RequiredTags, tag2, value]
+
+        ConformancePackName:
+          StaticValue:
+            Values:
+              - Ref: ConformancePackName
+        ResourceID:
+          ResourceValue:
+            Value: "RESOURCE_ID"
+        AutomationAssumeRole:
+          StaticValue:
+            Values:
+              - "arn:aws:iam::<management-account-id>:role/TagRemediationAutomationRole"
+      ExecutionControls:
+        SsmControls:
+          ConcurrentExecutionRatePercentage: 10
+          ErrorPercentage: 10
+      Automatic: True
+      MaximumAutomaticAttempts: 10
+      RetryAttemptSeconds: 600
