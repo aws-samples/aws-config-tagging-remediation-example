@@ -53,7 +53,7 @@ Resources:
           StaticValue:
             Values:
               - !Sub
-                - '{"${tag1key}":"${tag1value}","${tag2key}":"${tag2value}"}'
+                - '{"${tag1key}":"${tag1value}"}'
                 - tag1key: !FindInMap [RequiredTags, tag1, key]
                   tag1value: !FindInMap [RequiredTags, tag1, value]
 
