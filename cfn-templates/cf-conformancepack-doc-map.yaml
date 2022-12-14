@@ -26,7 +26,7 @@ Mappings:
       key: company-name
       value: CompanyXYZ
 Resources:
-  AWSConfigProcessCheck:
+  ResourceTaggingCheck:
     Properties:
       ConfigRuleName: required-tags
       Description: Check resources against the required tags
