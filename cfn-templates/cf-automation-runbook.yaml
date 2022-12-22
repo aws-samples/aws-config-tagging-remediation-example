@@ -37,7 +37,7 @@ Resources:
           * SetRequiredTags.SuccessfulResources: A list of the resources that were successfully tagged.
           * SetRequiredTags.FailedResources : A mapList of the resources where tagging failed and the reason for the failure.
         schemaVersion: '0.3'
-        assumeRole: 'arn:aws:iam::{{global:ACCOUNT_ID}}:role/tagging-remediation-role'
+        assumeRole: 'arn:aws:iam::{{global:ACCOUNT_ID}}:role/TagRemediationAutomationRole'
         outputs:
           - SetRequiredTags.SuccessfulResources
           - SetRequiredTags.FailedResources
