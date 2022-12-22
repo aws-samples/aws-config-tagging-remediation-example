@@ -51,7 +51,7 @@ Resources:
           - Effect: Allow
             Action:
               - 'ec2:CreateTags'
-            Resource: 'arn:aws:ec2:::instance/*'
+            Resource: 'arn:aws:ec2:*:*:instance/*'
       PolicyName: TagRemediationAutomationPolicy
       Roles:
         - !Ref TagRemediationAutomationRole
