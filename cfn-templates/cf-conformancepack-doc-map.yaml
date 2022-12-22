@@ -42,7 +42,7 @@ Resources:
 
     Type: AWS::Config::ConfigRule
   MapTaggingRemediation:
-    DependsOn: AWSConfigProcessCheck
+    DependsOn: ResourceTaggingCheck
     Type: 'AWS::Config::RemediationConfiguration'
     Properties:
       ConfigRuleName: required-tags
