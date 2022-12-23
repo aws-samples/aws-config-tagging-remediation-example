@@ -1,4 +1,3 @@
-# *
 # * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # * SPDX-License-Identifier: MIT-0
 # *
@@ -15,8 +14,9 @@
 # * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 # * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 # *
-
+---
 AWSTemplateFormatVersion: 2010-09-09
+Description: This CloudFormation template creates a Organization conformance pack by using the conformance pack template defined in TemplateS3Uri
 Resources:
   TagRemediationConformancePack:
     Type: AWS::Config::OrganizationConformancePack
