@@ -16,7 +16,7 @@
 # *
 ---
 AWSTemplateFormatVersion: 2010-09-09
-Description: This CLoudFormation template creates IAM role which can be assumed by the SSM runbook with the permission to tag resources
+Description: This CloudFormation template creates IAM role which can be assumed by the SSM runbook with the permission to tag resources
 Resources:
   TagRemediationAutomationRole:
     Type: 'AWS::IAM::Role'
@@ -51,7 +51,7 @@ Resources:
           - Effect: Allow
             Action:
               - 'ec2:CreateTags'
-            Resource: 'arn:aws:ec2:*:*:instance/*'
+            Resource: !Sub 'arn:${AWS::Partition}:ec2:*:*:instance/*'
       PolicyName: TagRemediationAutomationPolicy
       Roles:
         - !Ref TagRemediationAutomationRole
