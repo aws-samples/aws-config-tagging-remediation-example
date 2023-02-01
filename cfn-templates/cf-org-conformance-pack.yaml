@@ -17,12 +17,18 @@
 ---
 AWSTemplateFormatVersion: 2010-09-09
 Description: This CloudFormation template creates a Organization conformance pack by using the conformance pack template defined in TemplateS3Uri
+Parameters:
+  ExcludedAccounts:
+    Description: Comma delimited accounts in your organizations where you want to exclude from deploying this comformance pack
+    Type: CommaDelimitedList
+    Default: ''
 Resources:
   TagRemediationConformancePack:
     Type: AWS::Config::OrganizationConformancePack
     Properties:
-      ExcludedAccounts:
-        - <excluded account 1>
-        - <excluded account 2>
+      ExcludedAccounts: !If [ ExcludedAccountsCheck, !Ref 'AWS::NoValue', !Ref ExcludedAccounts ]
       OrganizationConformancePackName: TagRemediationConformancePack
       TemplateS3Uri: <S3 URI for the comformance pack template>
+Conditions:
+  ExcludedAccountsCheck:
+    !Equals [!Select [0, !Ref ExcludedAccounts], '']
