@@ -37,7 +37,7 @@ Resources:
           * SetRequiredTags.SuccessfulResources: A list of the resources that were successfully tagged.
           * SetRequiredTags.FailedResources : A mapList of the resources where tagging failed and the reason for the failure.
         schemaVersion: '0.3'
-        assumeRole: 'arn:aws:iam::{{global:ACCOUNT_ID}}:role/TagRemediationAutomationRole'
+        assumeRole: 'arn:{{global:AWS_PARTITION}}:iam::{{global:ACCOUNT_ID}}:role/TagRemediationAutomationRole'
         outputs:
           - SetRequiredTags.SuccessfulResources
           - SetRequiredTags.FailedResources
@@ -98,11 +98,11 @@ Resources:
 
                       except Exception as e:
                         errorMsg = str(e)
-                        FailedResources.append({'ResourceArn': arn , "error": errorMsg})
+                        FailedResources.append({'ResourceArn': arn , 'error': errorMsg})
 
                   out = {
-                      "SuccessesResources": successesResources,
-                      "FailedResources": FailedResources
+                      'SuccessesResources': successesResources,
+                      'FailedResources': FailedResources
                   }
                   return out
 
