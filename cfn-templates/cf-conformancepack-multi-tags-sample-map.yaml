@@ -51,7 +51,7 @@ Resources:
     Type: 'AWS::Config::RemediationConfiguration'
     Properties:
       ConfigRuleName: required-tags
-      TargetId: 'arn:aws:ssm:us-east-1:<management-account-id>:document/SsmDocumentTagRemediation'
+      TargetId: !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:<management-account-id>:document/SsmDocumentTagRemediation'
       TargetType: 'SSM_DOCUMENT'
       Parameters:
         RequiredTags:
