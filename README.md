@@ -2,7 +2,7 @@
 
 This repo hosts CloudFormation templates related to the AWS Management & Governance blog post:
 
-**Link-TBD**
+https://aws.amazon.com/blogs/mt/tag-workloads-with-aws-config-conformance-packs-across-aws-accounts/
 
 For details on how to use the corresponding CloudFormation templates, refer to the blog post.
 
